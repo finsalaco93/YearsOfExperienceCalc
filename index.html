@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Years of Experience Calculator</title>
+  <title>Total Timeline Calculator</title>
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
   <style>
     body {
@@ -20,6 +20,7 @@
       border-radius: 12px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
       backdrop-filter: blur(10px);
+      position: relative;
     }
     h2 {
       text-align: center;
@@ -48,6 +49,7 @@
       background: rgba(255, 255, 255, 0.2);
       color: #e0e0e0;
       outline: none;
+      box-sizing: border-box;
     }
     .timeline input[type="text"]::placeholder {
       color: #b0b0b0;
@@ -90,7 +92,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Years of Experience Calculator</h2>
+    <h2>Total Timeline Calculator</h2>
     <div id="timelines">
       <!-- Initial timeline input group -->
       <div class="timeline">
@@ -141,7 +143,96 @@
       }
     }
 
-    // Add a new timeline block
+    // Auto-insert slashes as user types
+    function formatDateOnInput(e) {
+      let value = e.target.value;
+      // Remove all non-digit characters
+      value = value.replace(/\D/g, '');
+      if (value.length > 2) {
+        value = value.slice(0,2) + '/' + value.slice(2);
+      }
+      if (value.length > 5) {
+        value = value.slice(0,5) + '/' + value.slice(5, 9);
+      }
+      e.target.value = value;
+    }
+
+    // Show a temporary date picker overlay when user clicks on the text input
+    function showCalendarPicker(e) {
+      const originalInput = e.target;
+      // Prevent multiple pickers for the same input
+      if (originalInput.dataset.datepickerOpen) return;
+      originalInput.dataset.datepickerOpen = "true";
+
+      // Create a temporary input of type date
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.style.position = 'absolute';
+      // Position the date input exactly over the original input
+      const rect = originalInput.getBoundingClientRect();
+      dateInput.style.left = rect.left + 'px';
+      dateInput.style.top = rect.top + 'px';
+      dateInput.style.width = rect.width + 'px';
+      dateInput.style.height = rect.height + 'px';
+      dateInput.style.zIndex = 1000;
+      dateInput.style.border = "none";
+      dateInput.style.fontSize = window.getComputedStyle(originalInput).fontSize;
+      dateInput.style.fontFamily = window.getComputedStyle(originalInput).fontFamily;
+      dateInput.style.opacity = "0.9";
+      dateInput.style.background = "#ffffff";
+
+      // If the original input already has a valid date, convert it for the date input (yyyy-mm-dd)
+      const parts = originalInput.value.split('/');
+      if (parts.length === 3) {
+        const mm = parts[0].padStart(2, '0');
+        const dd = parts[1].padStart(2, '0');
+        const yyyy = parts[2];
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+      }
+
+      document.body.appendChild(dateInput);
+      dateInput.focus();
+
+      // When a date is chosen, update the original input
+      dateInput.addEventListener('change', function() {
+        if (dateInput.value) {
+          const parts = dateInput.value.split('-');
+          if (parts.length === 3) {
+            const formatted = `${parts[1]}/${parts[2]}/${parts[0]}`;
+            originalInput.value = formatted;
+          }
+        }
+      });
+
+      // Remove the temporary date input on blur
+      dateInput.addEventListener('blur', function() {
+        if (dateInput.value) {
+          const parts = dateInput.value.split('-');
+          if (parts.length === 3) {
+            const formatted = `${parts[1]}/${parts[2]}/${parts[0]}`;
+            originalInput.value = formatted;
+          }
+        }
+        document.body.removeChild(dateInput);
+        originalInput.dataset.datepickerOpen = "";
+      });
+    }
+
+    // Attach event listeners to date input fields
+    function attachDateInputEvents(inputElement) {
+      inputElement.addEventListener('input', formatDateOnInput);
+      inputElement.addEventListener('click', showCalendarPicker);
+    }
+
+    // Attach events to existing date inputs on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateInputs = document.querySelectorAll('.startDate, .endDate');
+      dateInputs.forEach(input => {
+        attachDateInputEvents(input);
+      });
+    });
+
+    // Add a new timeline block and attach events to its date inputs
     document.getElementById('addTimelineBtn').addEventListener('click', function() {
       const timelinesContainer = document.getElementById('timelines');
       const newTimeline = document.createElement('div');
@@ -154,6 +245,10 @@
         <button class="removeTimeline" onclick="removeTimeline(this)">Remove</button>
       `;
       timelinesContainer.appendChild(newTimeline);
+      const newInputs = newTimeline.querySelectorAll('.startDate, .endDate');
+      newInputs.forEach(input => {
+        attachDateInputEvents(input);
+      });
     });
 
     // Calculate the total duration from all timeline intervals
